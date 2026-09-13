@@ -1,0 +1,365 @@
+# Author: Sai Vineetha Tirumalla
+# Contribution: OpenAPI 3.1 contract for the gateway API.
+
+openapi: 3.1.0
+
+info:
+  title: GitHub Issues Gateway API
+  version: 1.0.0
+  description: API wrapper for GitHub issue management.
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /issues:
+    post:
+      summary: Create an issue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueRequest'
+            example:
+              title: Login bug
+              body: User cannot log in
+              labels:
+                - bug
+      responses:
+        '201':
+          description: Issue created
+          headers:
+            Location:
+              description: URL of the created issue
+              schema:
+                type: string
+              example: /issues/42
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      summary: List issues
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum:
+              - open
+              - closed
+              - all
+            default: open
+
+        - name: labels
+          in: query
+          schema:
+            type: string
+
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+
+      responses:
+        '200':
+          description: Issues returned
+          headers:
+            Link:
+              description: GitHub pagination header
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Issue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /issues/{number}:
+    parameters:
+      - name: number
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+
+    get:
+      summary: Get one issue
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Issue returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update or close an issue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueRequest'
+            example:
+              title: Updated issue
+              body: Updated body
+              state: closed
+      responses:
+        '200':
+          description: Issue updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /issues/{number}/comments:
+    parameters:
+      - name: number
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+
+    post:
+      summary: Create a comment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+            example:
+              body: Investigating this issue.
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      summary: List comments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Comments returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: GitHubToken
+
+  schemas:
+    CreateIssueRequest:
+      type: object
+      required:
+        - title
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 256
+        body:
+          type:
+            - string
+            - 'null'
+        labels:
+          type: array
+          items:
+            type: string
+
+    UpdateIssueRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 256
+        body:
+          type:
+            - string
+            - 'null'
+        state:
+          type: string
+          enum:
+            - open
+            - closed
+
+    CreateCommentRequest:
+      type: object
+      required:
+        - body
+      additionalProperties: false
+      properties:
+        body:
+          type: string
+          minLength: 1
+
+    Issue:
+      type: object
+      required:
+        - number
+        - htmlUrl
+        - state
+        - title
+      properties:
+        number:
+          type: integer
+        htmlUrl:
+          type: string
+          format: uri
+        state:
+          type: string
+        title:
+          type: string
+        body:
+          type:
+            - string
+            - 'null'
+        labels:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        updatedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        user:
+          type:
+            - object
+            - 'null'
+        createdAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        htmlUrl:
+          type:
+            - string
+            - 'null'
+          format: uri
+
+    Error:
+      type: object
+      required:
+        - message
+        - status
+        - timestamp
+      properties:
+        message:
+          type: string
+        status:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties:
+            type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Request validation failed
+            status: 400
+            timestamp: 2026-09-13T12:00:00Z
+            details:
+              title: title is required
+
+    Unauthorized:
+      description: Unauthorized request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: GitHub authentication failed
+            status: 401
+            timestamp: 2026-09-13T12:00:00Z
+            details: {}
+
+    NotFound:
+      description: Issue not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Issue not found
+            status: 404
+            timestamp: 2026-09-13T12:00:00Z
+            details: {}
