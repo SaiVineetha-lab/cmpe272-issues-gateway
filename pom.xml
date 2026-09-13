@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>3.2.4</version> <!-- Note: Corrected Spring Boot version -->
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>edu.sjsu.cmpe272</groupId>
@@ -30,6 +30,22 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
+		<!-- ======================================================= -->
+		<!--   NEW DEPENDENCIES ADDED FOR WEBHOOK & PERSISTENCE      -->
+		<!-- ======================================================= -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- ======================================================= -->
+		<!--             EXISTING PROJECT DEPENDENCIES               -->
+		<!-- ======================================================= -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -48,6 +64,13 @@
 			<artifactId>spring-boot-devtools</artifactId>
 			<scope>runtime</scope>
 			<optional>true</optional>
+		</dependency>
+
+		<!-- TEST DEPENDENCIES -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
