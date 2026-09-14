@@ -1,8 +1,8 @@
-package com.example.webhook.controller;
+package edu.sjsu.cmpe272.issuesgateway.controller;
 
-import com.example.webhook.model.WebhookEvent;
-import com.example.webhook.repository.WebhookEventRepository;
-import com.example.webhook.service.HmacService;
+import edu.sjsu.cmpe272.issuesgateway.model.WebhookEvent;
+import edu.sjsu.cmpe272.issuesgateway.repository.WebhookEventRepository;
+import edu.sjsu.cmpe272.issuesgateway.service.HmacService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.PageRequest;
@@ -35,17 +35,16 @@ public class WebhookController {
             @RequestHeader(value = "X-GitHub-Delivery", required = false) String deliveryId,
             @RequestBody byte[] rawBody) {
 
-        // 1. Verify HMAC SHA-256 Signature (401 on mismatch or missing header)
+        // 1. HMAC Verification
         if (!hmacService.verifySignature(rawBody, signature)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // 2. Validate Event Type (400 on unknown event)
+        // 2. Validate Event
         if (eventType == null || !ALLOWED_EVENTS.contains(eventType)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
-        // Parse payload action
         String bodyString = new String(rawBody, StandardCharsets.UTF_8);
         String action = null;
         try {
@@ -55,25 +54,22 @@ public class WebhookController {
             }
         } catch (Exception ignored) {}
 
-        // 3. Deduplicate on (X-GitHub-Delivery + action)
+        // 3. Deduplicate (Delivery ID + Action)
         String dedupeActionKey = (action != null) ? action : "N/A";
         if (repository.existsByDeliveryIdAndAction(deliveryId, dedupeActionKey)) {
-            // No-op for redelivery
             return ResponseEntity.noContent().build();
         }
 
-        // Save Event to DB
+        // Save
         WebhookEvent event = new WebhookEvent(deliveryId, eventType, dedupeActionKey, bodyString);
         repository.save(event);
 
-        // Return 204 No Content on success
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/events")
     public ResponseEntity<List<WebhookEvent>> getEvents(
             @RequestParam(name = "limit", defaultValue = "10") int limit) {
-        
         List<WebhookEvent> events = repository.findLatestEvents(PageRequest.of(0, limit));
         return ResponseEntity.ok(events);
     }
